@@ -18,7 +18,6 @@ const read = readline.createInterface({
   terminal: false
 });
 
-
 read.on('line', (line) => {
   const [game, games] = line.split(':');
   const [, gameId] = game.split(' ');
@@ -31,7 +30,7 @@ read.on('line', (line) => {
     }
 
     const round = plays[i].trim().split(',');
-
+    console.log('o')
     for (let j = 0; j < round.length; j++) {
       const [num, color] = round[j].trim().split(' ');
       if (parseInt(num) > maxItems.get(color)) {
@@ -39,7 +38,6 @@ read.on('line', (line) => {
         break;
       }
     }
-
   }
   
   if (validGame) {
