@@ -1,140 +1,195 @@
 const fs = require('fs');
-const readline = require('readline');
-const path = require('path');
 
-const __dir = path.dirname(__filename);
-const inputFile = path.join(__dir, './teste.txt');
+const path = 'input.txt';
+const matriz = fs.readFileSync(path, 'utf-8');
 
-let __total = 0;
-let prevLine;
+const lines = matriz.split('\n').map(line => line.split(''));
 
-const read = readline.createInterface({
-  input: fs.createReadStream(inputFile),
-  output: process.stdout, 
-  terminal: false
-});
+let accum = 0;
 
-read.on('line', ( line ) => {
-  // first line
-  if (!prevLine) {
-      const { symbols, arrObjNumbers } = spreadSymbolsAndNumbers(line);
-      prevLine = filterLine(symbols, arrObjNumbers);
-  } else {
+for (let i = 0; i < lines.length; i++){
+  const line = lines[i];
 
-    const { symbols, arrObjNumbers } = spreadSymbolsAndNumbers(line);
-    const { symbols: newSymbols, arrObjNumbers: newArrObjNumbers } = filterLine(symbols, arrObjNumbers);
+  for (let j = 0; j < line.length; j++){
+    const char = line[j];
+    const numbers = [];
 
-    let prevNumbersIndexToAdd = [];
-    for (let i = 0; i < newSymbols.length; i++){
-      for (let j = 0; j < prevLine.arrObjNumbers.length; j++){
-        if(
-            prevLine.arrObjNumbers[j].index.includes(symbols[i]) ||
-            prevLine.arrObjNumbers[j].index.includes(symbols[i] + 1 ) ||
-            prevLine.arrObjNumbers[j].index.includes(symbols[i] - 1 ) 
-          ){
-          if (!prevNumbersIndexToAdd.includes(j)) {
-            prevNumbersIndexToAdd.push(j);
-          }
+    if (char === '*') {
+      const numAtTop = checkTop(lines, i, j);
+      if (numAtTop) {
+        numbers.push(numAtTop);
+      } else {
+        const numAtTopRight = checkTopRightDiagonal(lines, i, j);
+        if (numAtTopRight) {
+          numbers.push(numAtTopRight);
+        }
+
+        const numAtTopLeft = checkTopLeftDiagonal(lines, i, j);
+        if (numAtTopLeft) {
+          numbers.push(numAtTopLeft);
         }
       }
-    }
 
-    let currentNumbersIndexToAdd = [];
-    for (let i = 0; i < prevLine.symbols.length; i++){
-      for (let j = 0; j < newArrObjNumbers.length; j++){
-        if(
-            newArrObjNumbers[j].index.includes(prevLine.symbols[i]) ||
-            newArrObjNumbers[j].index.includes(prevLine.symbols[i] + 1 ) ||
-            newArrObjNumbers[j].index.includes(prevLine.symbols[i] - 1 ) 
-          ){
-            if (!currentNumbersIndexToAdd.includes(j)) {
-              currentNumbersIndexToAdd.push(j);
-            }
+      const numAtBottom = checkBottom(lines, i, j);
+      if (numAtBottom) {
+        numbers.push(numAtBottom);
+      } else {
+        const numAtBottomRight = checkBottomRightDiagonal(lines, i, j);
+        if (numAtBottomRight) {
+          numbers.push(numAtBottomRight);
+        }
+
+        const numAtBottomLeft = checkBottomLeftDiagonal(lines, i, j);
+        if (numAtBottomLeft) {
+          numbers.push(numAtBottomLeft);
         }
       }
-    }
-    console.log(prevLine)
-    //sum numbers 
-    prevNumbersIndexToAdd.forEach(indx => {
-      __total += prevLine.arrObjNumbers[indx].number
-  
-    })
 
-    currentNumbersIndexToAdd.forEach(indx =>{
-      __total += newArrObjNumbers[indx].number;
-    })
+      const numAtRight = checkRight(line, j);
+      if (numAtRight) {
+        numbers.push(numAtRight);
+      }
 
-    //set the current line to the prev;
-    prevLine = { symbols: newSymbols, arrObjNumbers: newArrObjNumbers }
-  }
-})
+      const numAtLeft = checkLeft(line, j);
+      if (numAtLeft) {
+        numbers.push(numAtLeft);
+      }
 
-read.on('close', () => {
-  console.log(__total)
-})
-
-function spreadSymbolsAndNumbers(line) {
-  let arrObjNumbers = [];
-  let num = '';
-  let numbersIndexes = [];
-  let nums = [];
-  let symbols = [];
-
-  const chars = line.split('');
-  for (let i = 0; i < chars.length; i++) 
-  {
-    //to see if is a number
-    if (!isNaN(chars[i])) 
-    {
-      //if the next char isnt a number end the concatenation
-      //else conct the number
-      if (isNaN(chars[i + 1]))
-      {
-        num += chars[i];
-        numbersIndexes.push(i);
-        nums.push(num);
-        const newObj = { number: parseInt(num), index: numbersIndexes}
-        arrObjNumbers = [...arrObjNumbers, newObj]
-
-        numbersIndexes = []
-        num = '';
-      } else 
-      {
-        numbersIndexes.push(i);
-        num += chars[i]
+      if (numbers.length === 2) {
+        const ratio = numbers[0] * numbers[1];
+        accum += ratio;
       }
     }
-
-    if (chars[i] === "*"){
-      symbols.push(i)
-    }
   }
-
-  return { symbols, arrObjNumbers };
 }
 
-function filterLine(symbols, arrObjNumbers){
-  //to not repeat numbers i will pop them out of the array if there been in a line 
-  const itemsToRemove = [];
+console.log(accum)
 
-  // let { symbols, arrObjNumbers } = line;
-    
-  //get the current line
-  for (let i = 0; i < arrObjNumbers.length; i++) {
-    const minIndex = arrObjNumbers[i].index[0];
-    const maxIndex = arrObjNumbers[i].index[arrObjNumbers[i].index.length - 1]
-  
-    if (symbols.includes(minIndex - 1) || symbols.includes(maxIndex + 1)){
-      __total += parseInt(arrObjNumbers[i].number);
+function checkRight(currLine, symbolIndex){
+  const charAtRight = currLine[symbolIndex + 1];
 
-      if(!itemsToRemove.includes(i))itemsToRemove.push(i);
-    }
+  if (!charAtRight || !charAtRight.match(/\d/)){
+    return;
   }
-  //remve the added numbers the
-  itemsToRemove.sort((a, b) => b - a); // start removing items in the end of the array
-  itemsToRemove.forEach(itemIdx => {
-    arrObjNumbers.splice(itemIdx, 1);
-  })
 
-  return { symbols, arrObjNumbers }
-} 
+  return getNumber(currLine, symbolIndex + 1);
+}
+
+function checkLeft(currLine, symbolIndex){
+  const charAtLeft = currLine[symbolIndex - 1];
+
+  if (!charAtLeft || !charAtLeft.match(/\d/)){
+    return;
+  }
+
+  return getNumber(currLine, symbolIndex - 1);
+}
+
+function checkTop(lines, lineIndex, symbolIndex){
+  if(lineIndex == 0){
+    return;
+  }
+
+  const topLine = lines[lineIndex -1];
+  const charAtTop = topLine[symbolIndex];
+
+  if (charAtTop.match(/\d/)){
+    return getNumber(topLine, symbolIndex)
+  } 
+}
+
+function checkBottom(lines, lineIndex, symbolIndex){
+  const bottomLine = lines[lineIndex + 1];
+  
+  if(!bottomLine){
+    return;
+  }
+
+  const charAtBottom = bottomLine[symbolIndex];
+
+  if (charAtBottom.match(/\d/)){
+    return getNumber(bottomLine, symbolIndex)
+  } 
+}
+
+function checkBottomRightDiagonal(lines, lineIndex, symbolIndex){
+  const bottomLineOfChar = lines[lineIndex  + 1];
+
+  if (!bottomLineOfChar) {
+    return;
+  }
+
+  const charAtBottomRightDiagonal = bottomLineOfChar[symbolIndex + 1];
+
+  if (charAtBottomRightDiagonal.match(/\d/)){
+    return getNumber(bottomLineOfChar, symbolIndex + 1);
+  } 
+}
+
+function checkTopRightDiagonal(lines, lineIndex, symbolIndex){
+  if (lineIndex == 0) {
+    return;
+  }
+
+  const topRightDiagonal = lines[lineIndex - 1];
+  const charAtTopRightDiagonal = topRightDiagonal[symbolIndex + 1];
+
+  if (charAtTopRightDiagonal.match(/\d/)){
+    return getNumber(topRightDiagonal, symbolIndex + 1);
+  } 
+}
+
+function checkBottomLeftDiagonal(lines, lineIndex, symbolIndex){
+  const bottomLeftDiagonal = lines[lineIndex + 1];
+
+  if (!bottomLeftDiagonal) {
+    return;
+  }
+
+  const charAtBottomLeftDiagonal = bottomLeftDiagonal[symbolIndex - 1];
+
+  if (charAtBottomLeftDiagonal.match(/\d/)){
+    return getNumber(bottomLeftDiagonal, symbolIndex - 1);
+  } 
+}
+
+function checkTopLeftDiagonal(lines, lineIndex, symbolIndex){
+  if (lineIndex == 0) {
+    return;
+  }
+
+  const topLeftDiagonal = lines[lineIndex - 1];
+  const charAtTopLeftDiagonal = topLeftDiagonal[symbolIndex - 1];
+
+  if (charAtTopLeftDiagonal.match(/\d/)){
+    return getNumber(topLeftDiagonal, symbolIndex - 1);
+  } 
+}
+
+function getNumber(line, symbolIndex) {
+  let numStr = '';
+
+  let numInitialIndex = symbolIndex === 0 ? 0 : (() => {
+    let startIndex = symbolIndex;
+
+    while (startIndex > 0) {
+      const idx = line[startIndex - 1];
+      if (idx && idx.match(/\d/)) {
+        startIndex -= 1;
+      } else {
+        break;
+      }
+    }
+
+    return startIndex;
+  })();
+
+  numStr += line[numInitialIndex];
+
+  while (line[numInitialIndex + 1] && line[numInitialIndex + 1].match(/\d/)) {
+    numStr += line[numInitialIndex + 1];
+    numInitialIndex += 1;
+  }
+  console.log(numStr)
+  return parseInt(numStr, 10);
+}
