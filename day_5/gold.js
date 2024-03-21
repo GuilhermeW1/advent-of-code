@@ -32,7 +32,7 @@ function resolve() {
     index % 2 == 0 ? mapSeeds.push(parseInt(item)) : range.push(parseInt(item))
   );
   console.log(mapSeeds , range)
-  const chunks = chunkify(parseInt(mapSeeds[5]) ,parseInt(range[5]), 1);
+  const chunks = chunkify(parseInt(mapSeeds[5]) ,parseInt(range[5]), 6);
 
   chunks.forEach((data, i) => {
     const worker = new Worker("./worker.js");

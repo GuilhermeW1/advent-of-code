@@ -11,6 +11,7 @@ const lineFile = file.split('\n');
 
 function resolve() {
   const blocsOfMaps = breakBlocs(lineFile);
+  console.log(blocsOfMaps)
   const [,seeds] = blocsOfMaps[0][0].split(':');
 
   const initialSeeds = seeds.trim().split(' ');
@@ -50,6 +51,7 @@ function breakBlocs(){
   let newItem = [];
   for (let i = 0; i < lineFile.length; i++) {
 
+    //last case
     if(lineFile[i + 1] == undefined){
       newItem.push(lineFile[i]);
       maps.push(newItem);
