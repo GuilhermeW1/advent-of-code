@@ -9,49 +9,133 @@ import (
 )
 
 func main() {
-	arquivo, err := os.Open("../input.txt")
-	defer arquivo.Close()
-
+	arquivo, err := os.Open("../teste.txt")
 	if err != nil {
 		panic(err)
 	}
-	// 3943078016 158366385
-	lowest := 0
-	blocs := breakBlock(arquivo)
-	// seeds := getSeeds(blocs[0][0])
+	defer arquivo.Close()
+
+	blocsOfMaps := breakBlock(arquivo)
+	seeds := getSeeds(blocsOfMaps[0][0])
 	// seedsPairs := len(seeds) / 2
-	// fmt.Print(blocs[1][3])
 
-	for i := 0; i <= 1; i += 2 {
-		curr := 3943078016 //strconv.Atoi(seeds[i])
-		rang := 158366385  //strconv.Atoi(seeds[i+1])
-		for currentSeed := curr; currentSeed < curr+rang-1; currentSeed++ {
-			prccessSeed := currentSeed
-			fmt.Println(currentSeed)
+	// gera os pares em um slice de slices
+	var ranges [][]int64
+	for i := 0; i < len(seeds); i += 2 {
+		curr, _ := strconv.ParseInt(seeds[i], 10, 64)
+		rang, _ := strconv.ParseInt(seeds[i+1], 10, 64)
 
-			//comaca a iterar pelo bloco; pulando a primeira linha que e a das seeds
-			for bloc := 1; bloc < len(blocs); bloc++ {
-				//passa pelas linha do bloco
-				for blocLine := 1; blocLine < len(blocs[bloc]); blocLine++ {
-					line := strings.Split(blocs[bloc][blocLine], " ")
-					mapNext, _ := strconv.Atoi(line[0])
-					mapCurrent, _ := strconv.Atoi(line[1])
-					rangeLenght, _ := strconv.Atoi(line[2])
+		currentRanges := []int64{}
+		currentRanges = append(currentRanges, curr)
+		max := curr + rang - 1
+		currentRanges = append(currentRanges, max)
+		ranges = append(ranges, currentRanges)
+	}
 
-					if prccessSeed >= mapCurrent && prccessSeed <= mapCurrent+rangeLenght {
-						prccessSeed = mapNext + (prccessSeed - mapCurrent)
-						break
+	//comeca a mapear
+	// var lowestLocation int
+	var arr [][]int64
+	var next [][]int64
+	var nextBloc [][]int64
+	empty := [][]int64{}
+
+	for _, seedsRange := range ranges {
+
+		for bloc := 1; bloc < len(blocsOfMaps); bloc++ {
+
+			if len(nextBloc) > 0 {
+				next = nextBloc
+				nextBloc = empty
+			}
+
+			for blocLine := 1; blocLine < len(blocsOfMaps[bloc]); blocLine++ {
+
+				if len(next) == 0 {
+					arr = append(arr, seedsRange)
+				} else {
+					arr = append(arr, next...)
+					next = empty
+				}
+
+				line := strings.Split(blocsOfMaps[bloc][blocLine], " ")
+				nextMap, _ := strconv.Atoi(line[0])
+				currentMap, _ := strconv.Atoi(line[1])
+				// currentMap--
+				rangeOfMaps, _ := strconv.Atoi(line[2])
+				diffRanges := nextMap - currentMap
+
+				for idx, k := range arr {
+					//case 1 o range entra completamente dentro da linha
+					if k[0] >= int64(currentMap) && k[1] <= int64(currentMap+rangeOfMaps) {
+						newSlice := []int64{
+							k[0] + int64(diffRanges),
+							k[1] + int64(diffRanges),
+						}
+						//aqui preciso remover ja que os items ja vao para o proximo
+
+						arr = removeElement(arr, idx)
+						nextBloc = append(nextBloc, newSlice)
+						continue
 					}
+					//case 2 o range nao entra na linha
+					if k[0] < int64(currentMap) && k[1] < int64(currentMap) || k[0] > int64(currentMap+rangeOfMaps) {
+						continue
+					}
+
+					if k[0] < int64(currentMap) && k[1] < int64(currentMap+rangeOfMaps) {
+						// fmt.Print(currentMap + rangeOfMaps - 1)
+						newSlice := []int64{
+							int64(currentMap) + int64(diffRanges),
+							k[1] + int64(diffRanges),
+						}
+						nextBloc = append(nextBloc, newSlice)
+
+						//atualiza o valor do atual
+						diff := (int64(currentMap) - k[0]) - 1
+
+						secondSlice := []int64{
+							k[0],
+							k[0] + diff,
+						}
+						next = append(next, secondSlice)
+						arr = removeElement(arr, idx)
+					}
+
+					if k[0] >= int64(currentMap) && k[1] > int64((currentMap+rangeOfMaps)-1) {
+						newSlice := []int64{
+							k[0],
+							int64(currentMap + rangeOfMaps),
+						}
+						nextBloc = append(nextBloc, newSlice)
+
+						//atualiza o valor do atual
+						diff := (int64(currentMap+rangeOfMaps) - k[1])
+						secondSlice := []int64{
+							k[1],
+							k[1] + diff,
+						}
+						next = append(next, secondSlice)
+						arr = removeElement(arr, idx)
+					}
+				}
+
+				if len(next) == 0 && len(arr) == 0 {
+					break
+				} else {
+					next = append(next, arr...)
+					arr = empty
 				}
 			}
 
-			if lowest == 0 || prccessSeed < lowest {
-				lowest = prccessSeed
-			}
+			//atualiza o bloco
+			nextBloc = append(nextBloc, next...)
+			fmt.Print(nextBloc)
 		}
 	}
+}
 
-	fmt.Println(lowest)
+func removeElement(slice [][]int64, index int) [][]int64 {
+	return append(slice[:index], slice[index+1:]...)
 }
 
 func breakBlock(file *os.File) [][]string {
@@ -72,7 +156,7 @@ func breakBlock(file *os.File) [][]string {
 		}
 	}
 
-	return blocs
+	return append(blocs, lines)
 }
 
 func getSeeds(s string) []string {
